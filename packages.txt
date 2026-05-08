@@ -1,22 +1,3 @@
-# System dependencies for Streamlit Cloud
-# These packages are required for PDF processing and other system-level operations
-
-# PDF processing dependencies
 poppler-utils
-libglib2.0-0
-libsm6
-libxext6
-libxrender-dev
-libgomp1
-libgthread-2.0-0
-
-# Font rendering
-libfontconfig1
-libfreetype6
-
-# General system libraries
-libglib2.0-0
-libsm6
-libxext6
-libxrender-dev
-libgomp1
+tesseract-ocr
+libgl1
