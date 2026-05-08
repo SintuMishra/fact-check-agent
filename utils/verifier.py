@@ -22,7 +22,11 @@ class ClaimVerifier:
         """Verify a list of claims and return verification results."""
         results = []
         for claim in claims:
-            results.append(self.verify_claim(claim))
+            try:
+                results.append(self._normalize_result(self.verify_claim(claim), claim))
+            except Exception as e:
+                logger.error(f"Claim verification failed: {e}")
+                results.append(self._fallback_error_result(claim))
         return results
 
     def verify_claim(self, claim: Dict[str, Any]) -> Dict[str, Any]:
@@ -35,28 +39,51 @@ class ClaimVerifier:
         Returns:
             Verification result with status, confidence, corrected_fact, explanation, sources
         """
-        claim_text = ''
-        if isinstance(claim, dict):
-            claim_text = claim.get('claim_text') or claim.get('claim') or ''
-        else:
-            claim_text = str(claim)
+        claim_text = self._extract_claim_text(claim)
 
         if not claim_text:
-            return self._create_error_result(claim, "Claim text is missing")
-
-        # Search the web for the claim
-        search_results = self._search_web(claim_text)
-
-        if not search_results:
             return self._fallback_error_result(claim, claim_text)
 
-        # Analyze the claim against search results
-        verification = self._analyze_claim_with_ai(claim_text, search_results)
+        try:
+            # Search the web for the claim
+            search_results = self._search_web(claim_text)
 
-        if verification.get('status') not in ['Verified', 'Inaccurate', 'False']:
+            if not search_results:
+                return self._fallback_error_result(claim, claim_text)
+
+            # Analyze the claim against search results
+            verification = self._analyze_claim_with_ai(claim_text, search_results)
+
+            if verification.get('status') not in ['Verified', 'Inaccurate', 'False']:
+                return self._fallback_error_result(claim, claim_text)
+
+            return self._normalize_result(verification, claim, claim_text)
+        except Exception as e:
+            logger.error(f"Unexpected verification error: {e}")
             return self._fallback_error_result(claim, claim_text)
 
-        confidence_value = verification.get('confidence', 35)
+    def _extract_claim_text(self, claim: Any) -> str:
+        """Safely extract displayable claim text from a string or dict claim."""
+        if isinstance(claim, str):
+            return claim
+        if isinstance(claim, dict):
+            claim_text = claim.get("claim_text") or claim.get("claim") or claim.get("text")
+            if claim_text is None:
+                return ""
+            return str(claim_text)
+        if claim is None:
+            return ""
+        return str(claim)
+
+    def _normalize_result(
+        self,
+        result: Dict[str, Any],
+        claim: Any,
+        claim_text: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Ensure every verification result has the expected structure."""
+        claim_text = claim_text or self._extract_claim_text(claim)
+        confidence_value = result.get('confidence', 35)
         if isinstance(confidence_value, float) and confidence_value <= 1:
             confidence_value = int(round(confidence_value * 100))
         elif isinstance(confidence_value, (int, float)):
@@ -65,12 +92,27 @@ class ClaimVerifier:
             confidence_value = 35
 
         return {
-            'claim': claim,
-            'status': verification.get('status', 'False'),
+            'claim': claim_text,
+            'status': result.get('status', 'False'),
             'confidence': min(max(confidence_value, 0), 100),
-            'corrected_fact': verification.get('corrected_fact', ''),
-            'explanation': verification.get('explanation', ''),
-            'sources': verification.get('sources', [])
+            'corrected_fact': result.get('corrected_fact', ''),
+            'explanation': result.get('explanation', ''),
+            'sources': result.get('sources', []) if isinstance(result.get('sources', []), list) else []
+        }
+
+    def _fallback_error_result(self, claim, claim_text=None):
+        if claim_text is None:
+            if isinstance(claim, dict):
+                claim_text = claim.get("claim") or claim.get("text") or str(claim)
+            else:
+                claim_text = str(claim)
+        return {
+            "claim": claim_text,
+            "status": "False",
+            "confidence": 35,
+            "corrected_fact": "Could not verify this claim from available live sources.",
+            "explanation": "The system could not find enough reliable evidence for this claim. Please review it manually.",
+            "sources": []
         }
 
     def _search_web(self, query: str) -> List[Dict[str, Any]]:
@@ -300,10 +342,10 @@ Return as JSON object with keys: status, confidence, corrected_fact, explanation
     def _create_error_result(self, claim: Dict, error_msg: str) -> Dict[str, Any]:
         """Create an error result for failed verification."""
         return {
-            'claim': claim,
-            'status': 'Error',
-            'confidence': 0.0,
-            'corrected_fact': '',
+            'claim': self._extract_claim_text(claim),
+            'status': 'False',
+            'confidence': 35,
+            'corrected_fact': 'Could not verify this claim from available live sources.',
             'explanation': error_msg,
             'sources': []
         }
