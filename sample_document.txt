@@ -1,0 +1,22 @@
+Sample Fact-Check Document
+==========================
+
+This document contains several factual claims for testing the Fact-Check Agent.
+
+Factual Claims:
+1. Company revenue grew 25% in 2023.
+2. The population of Tokyo is 14 million.
+3. Product A has 90% market share.
+4. The Earth is the third planet from the Sun.
+5. Water boils at 100 degrees Celsius at sea level.
+6. The United States has 50 states.
+7. The speed of light is approximately 299,792,458 meters per second.
+8. The Great Wall of China is visible from space (myth).
+
+Technical Details:
+- This is a sample document for testing PDF processing
+- Contains various types of factual claims
+- Includes both true and false statements
+- Used for demonstration purposes
+
+Note: This is a text file. For actual PDF testing, please upload a real PDF document.
