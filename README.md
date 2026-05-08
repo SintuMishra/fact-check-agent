@@ -156,7 +156,6 @@ They are helpful because some should verify cleanly, while others should trigger
 
 - Deployed App: https://fact-check-agent-ai.streamlit.app/
 - GitHub Repository: https://github.com/SintuMishra/fact-check-agent
-- Demo Video: Added in final form submission
 
 ## Final Note
 
